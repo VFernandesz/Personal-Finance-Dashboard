@@ -1,0 +1,64 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Usuario {
+  id        String              @id @default(cuid())
+  email     String              @unique
+  nome      String?
+  criadoEm  DateTime            @default(now())
+  conexoes  ConexaoOpenFinance[]
+  transacoes Transacao[]
+}
+
+model ConexaoOpenFinance {
+  id           String   @id @default(cuid())
+  usuarioId    String
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id])
+
+  provedor     String   // "PLUGGY"
+  itemId       String   // id do Pluggy
+  instituicao  String   // "NUBANK" etc.
+  ativo        Boolean  @default(true)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  transacoes   Transacao[]
+}
+
+model Transacao {
+  id              String   @id @default(cuid())
+  usuarioId       String
+  usuario         Usuario  @relation(fields: [usuarioId], references: [id])
+
+  conexaoId       String
+  conexao         ConexaoOpenFinance @relation(fields: [conexaoId], references: [id])
+
+  // Dados principais
+  data            DateTime
+  descricao       String
+  valorCentavos   Int       // negativo = saída, positivo = entrada
+  natureza        String    // "ENTRADA" | "SAIDA"
+  meio            String    // "PIX" | "CREDIT_CARD" | "DEBIT" | "BOLETO" etc.
+  tipoConta       String?   // "CONTA_PAGAMENTO" | "CARTAO_CREDITO" etc.
+
+  categoria       String?   // "Mercado", "Alimentação", etc.
+  subcategoria    String?
+
+  // Identificadores da origem (Open Finance)
+  openFinanceId   String    // id único da transação no Pluggy
+  instituicao     String?   // Nubank, Itaú, etc.
+  moeda           String?   // "BRL"
+  rawJson         Json?     // opcional: payload cru da API pra debug
+
+  origem          String?   // "pluggy_regulado" | "pluggy_sandbox"
+  criadoEm        DateTime  @default(now())
+  atualizadoEm    DateTime  @updatedAt
+
+  @@unique([usuarioId, openFinanceId]) // evita duplicar transação da mesma origem
+}
