@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@api/pluggy": "file:.api/apis/pluggy",
     "@prisma/client": "^7.0.1",
     "next": "16.0.4",
     "prisma": "^7.0.1",
