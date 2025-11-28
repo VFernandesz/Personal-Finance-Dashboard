@@ -1,8 +1,7 @@
-const url = 'https://api.pluggy.ai/auth'
+import { PluggyApiKeyResponse } from "@/types/ApiKeyResponse";
+import { Bank } from "@/types/Bank/Bank";
 
-type PluggyApiKeyResponse = {
-  apiKey: string;
-};
+const url = 'https://api.pluggy.ai/auth'
 
 export async function getPluggyApiKey(): Promise<string> {
     const clientId = process.env.PLUGGY_CLIENT_ID;
@@ -32,3 +31,26 @@ export async function getPluggyApiKey(): Promise<string> {
     const data = (await res.json()) as PluggyApiKeyResponse;
     return data.apiKey
 } 
+
+export async function getConnectors(): Promise<Bank[]>{
+    const apiKey = await getPluggyApiKey();
+
+    const url = 'https://api.pluggy.ai/connectors?countries=BR&isOpenFinance=true';
+
+    const res = await fetch(url, {
+        headers:{
+            'X-API-KEY': apiKey,
+            accept: 'application/json', 
+            'content-type': 'application/json'
+        },
+    });
+
+    if(!res.ok){
+        const text = await res.text();
+        throw new Error(`Erro ao buscar connectors: ${res.status} - ${text}`);
+    }
+
+    const data = await res.json();
+
+    return data.results;
+}
