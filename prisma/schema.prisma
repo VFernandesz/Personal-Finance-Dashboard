@@ -20,15 +20,17 @@ model ConexaoOpenFinance {
   usuarioId    String
   usuario      Usuario  @relation(fields: [usuarioId], references: [id])
 
-  provedor     String   // "PLUGGY"
-  itemId       String   // id do Pluggy
-  instituicao  String   // "NUBANK" etc.
+  provedor     String
+  itemId       String   // ID da Pluggy
+  instituicao  String
   ativo        Boolean  @default(true)
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
   transacoes   Transacao[]
+
+  @@unique([usuarioId, itemId])
 }
 
 model Transacao {

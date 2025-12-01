@@ -11,9 +11,11 @@
   "dependencies": {
     "@prisma/client": "^7.0.1",
     "next": "16.0.4",
+    "pluggy-sdk": "^0.80.0",
     "prisma": "^7.0.1",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "react-pluggy-connect": "^2.12.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

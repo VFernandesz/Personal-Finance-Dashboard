@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPluggyApiKey } from '@/lib/pluggyClient';
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     const apiKey = await getPluggyApiKey();
     return NextResponse.json({

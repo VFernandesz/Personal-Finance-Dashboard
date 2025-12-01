@@ -1,56 +1,104 @@
-import { PluggyApiKeyResponse } from "@/types/ApiKeyResponse";
 import { Bank } from "@/types/Bank/Bank";
 
 const url = 'https://api.pluggy.ai/auth'
 
+// lib/pluggyClient.ts (por exemplo)
+
+const PLUGGY_BASE_URL = 'https://api.pluggy.ai';
+
+// cache em memória
+let cachedApiKey: string | null = null;
+let cachedApiKeyExpiresAt: number | null = null;
+
+// 100 minutos em ms (2h - margem de segurança)
+const API_KEY_TTL_MS = 100 * 60 * 1000;
+
 export async function getPluggyApiKey(): Promise<string> {
-    const clientId = process.env.PLUGGY_CLIENT_ID;
-    const clientSecret = process.env.PLUGGY_CLIENT_SECRET;
+  const now = Date.now();
 
-    if (!clientId || !clientSecret) {
-        throw new Error(
-            'Missing Client ID or Client Secret!'
-        );
-    }
+  // Se temos apiKey em cache e ainda está válido, retorna
+  if (cachedApiKey && cachedApiKeyExpiresAt && now < cachedApiKeyExpiresAt) {
+    return cachedApiKey;
+  }
 
-    const options = {
-        method: 'POST',
-        headers: { accept: 'application/json', 'content-type': 'application/json' },
-        body: JSON.stringify({
-            clientId: '14500512-786b-4073-b93d-ffea7d2ecdb5',
-            clientSecret: '602c17a9-fcdb-4869-8e10-487d05f70ad9'
-        })
-    };
-    const res = await fetch(url, options)
+  const clientId = process.env.PLUGGY_CLIENT_ID;
+  const clientSecret = process.env.PLUGGY_CLIENT_SECRET;
 
-    if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Erro ao obter apiKey da Pluggy: ${res.status} - ${text}`)
-    }
+  if (!clientId || !clientSecret) {
+    throw new Error('Missing Client ID or Client Secret!');
+  }
 
-    const data = (await res.json()) as PluggyApiKeyResponse;
-    return data.apiKey
-} 
+  const res = await fetch(`${PLUGGY_BASE_URL}/auth`, {
+    method: 'POST',
+    headers: { accept: 'application/json', 'content-type': 'application/json' },
+    body: JSON.stringify({ clientId, clientSecret }),
+  });
 
-export async function getConnectors(): Promise<Bank[]>{
-    const apiKey = await getPluggyApiKey();
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erro ao obter apiKey da Pluggy: ${res.status} - ${text}`);
+  }
 
-    const url = 'https://api.pluggy.ai/connectors?countries=BR&isOpenFinance=true';
+  const data = (await res.json()) as { apiKey: string };
 
-    const res = await fetch(url, {
-        headers:{
-            'X-API-KEY': apiKey,
-            accept: 'application/json', 
-            'content-type': 'application/json'
-        },
-    });
+  cachedApiKey = data.apiKey;
+  cachedApiKeyExpiresAt = now + API_KEY_TTL_MS;
 
-    if(!res.ok){
-        const text = await res.text();
-        throw new Error(`Erro ao buscar connectors: ${res.status} - ${text}`);
-    }
+  return cachedApiKey;
+}
 
-    const data = await res.json();
 
-    return data.results;
+export async function getConnectToken(itemId?: string) {
+  const apiKey = await getPluggyApiKey();
+  const url = 'https://api.pluggy.ai/connect_token';
+
+  const body: any = {};
+
+  if (itemId) {
+    body.updateItem = itemId;
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'X-API-KEY': apiKey,
+      accept: 'application/json',
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Erro ao gerar Connect Token: ${res.status} - ${text} `)
+  }
+
+  const data = await res.json();
+  return data as { accessToken: string };
+
+
+}
+
+export async function getConnectors(): Promise<Bank[]> {
+  const apiKey = await getPluggyApiKey();
+
+  const url = 'https://api.pluggy.ai/connectors?countries=BR&isOpenFinance=true';
+
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'X-API-KEY': apiKey,
+      accept: 'application/json',
+      'content-type': 'application/json'
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erro ao buscar connectors: ${res.status} - ${text}`);
+  }
+
+  const data = await res.json();
+
+  return data.results;
 }
